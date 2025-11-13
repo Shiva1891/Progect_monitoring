@@ -1,0 +1,554 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AGTEK: Project Monitoring</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        async function loadFromDB() {
+            const res = await fetch("http://192.168.0.193:4000/tasks");
+            tasks = await res.json();
+            refresh();
+        }
+
+        // ✅ New Project
+        function newproject() {
+            document.getElementById("project").classList.remove("hidden");
+            document.getElementById("customername").value = "";
+            document.getElementById("projectname").value = "";
+            document.getElementById("parchaseqty").value = 0;
+            document.getElementById("contactperson").value = "";
+            document.getElementById("toDate").value = "";
+            document.getElementById("newjobno").value = "";
+        }
+        // ✅ create Project
+        function createp() {
+            const customername = document.getElementById("customername").value;
+            const projectname = document.getElementById("projectname").value;
+            const parchaseqty = document.getElementById("parchaseqty").value;
+            if (!customername) {
+                alert("Enter Customer Name");
+                return;
+            }
+            if (projectname == "") {
+                alert("Enter Project Name");
+                return;
+            }
+            if (parchaseqty <= 0) {
+                alert("Enter Quantity");
+                return;
+            }
+            else {
+                // ✅ create project
+                addTask = function () {
+                    const newTask = {
+                        task: 'New Task', owner: 'Owner', start_date: new Date().toISOString().slice(0, 10), end_date: new Date().toISOString().slice(0, 10),
+                        status: 'Not Started', progress: 0, budget: 0, spent: 0
+                    };
+                    fetch("http://192.168.0.193:4000/tasks", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(newTask)
+                    }).then(loadFromDB);
+                }
+            }
+        }
+        // ✅ close Project
+        function closeup() {
+            document.getElementById("project").classList.add("hidden");
+        }
+        
+        
+
+        // ✅ Override editTask
+        editTask = function (id) {
+            const t = tasks.find(x => x.id === id);
+            const next = prompt('Edit as JSON and press OK', JSON.stringify(t, null, 2));
+            if (!next) return;
+            try {
+                const obj = JSON.parse(next);
+                fetch(`http://192.168.0.193:4000/tasks/${id}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(obj)
+                }).then(loadFromDB);
+            } catch (e) { alert('Invalid JSON'); }
+        }
+
+        // ✅ DELETE
+        async function deleteTask(id) {
+            if (!confirm("Delete?")) return;
+            await fetch(`http://192.168.0.193:4000/tasks/${id}`, { method: "DELETE" }).then(loadFromDB);
+        }
+
+        // ✅ Load MySQL data on startup
+        window.onload = loadFromDB;
+    </script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        /* Simple scrollbar for tables */
+        .thin-scrollbar::-webkit-scrollbar {
+            height: 8px;
+            width: 8px
+        }
+
+        .thin-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 8px
+        }
+
+        .thin-scrollbar::-webkit-scrollbar-track {
+            background: transparent
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-1000">
+    <div class="flex max-w-10xl mx-auto">
+        <!-- Side bar production and Design -->
+        <div>
+            <div id="sidebar" class="top-0 left-0 h-full w-[150px] bg-gray-150 text-white
+                       transition-transform duration-300">
+                <!-- Design -->
+                <div class="p-3 text-2xl  font-semibold text-green-500">Design</div>
+
+                <div class="p-4 space-y-2">
+                    <button onclick="newproject()" class="rounded-2xl bg-green-200 p-1.5 shadow text-center text-black text-md w-[100px]">
+                        New   Project
+                    </button>
+                    <button id="allocate()" class="rounded-2xl bg-green-200 p-1.5 shadow text-center text-black text-md w-[100px] h-[50px] ">
+                        Allocate
+                    </button>
+                    <button id="dfm()" class="rounded-2xl bg-green-200 p-1.5 shadow text-center text-black text-md w-[100px] h-[50px] ">
+                        DFM
+                    </button>
+                </div>
+                <!-- Production -->
+                <div class="p-3 text-2xl  font-semibold text-green-500">Production</div>
+
+                <div class="p-4 space-y-2">
+                    <button id="createproject" class="rounded-2xl bg-green-200 p-1.5 shadow text-center text-black text-md w-[100px] h-[50px] ">
+                        Machining
+                    </button>
+                    <button id="createproject" class="rounded-2xl bg-green-200 p-1.5 shadow text-center text-black text-md w-[100px] h-[50px] ">
+                        DRO
+                    </button>
+                    <button id="createproject" class="rounded-2xl bg-green-200 p-1.5 shadow text-center text-black text-md w-[100px] h-[50px] ">
+                        Turning
+                    </button>
+                    <button id="createproject" class="rounded-2xl bg-green-200 p-1.5 shadow text-center text-black text-md w-[100px] h-[50px] ">
+                        Others
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Main Bar Dsahboard -->
+        <div class="px-3">
+            <!-- Header AGTEK -->
+            <header>
+                <div class="flex flex-col md:flex-row lg:flex-row md:items-start gap-4 mb-4">
+                    <h1 class="text-5xl font-bold tracking-tight text-green-500">AGTEK</h1>
+                    <p class="text-3xl text-left font-bold tracking-tight text-blue-500 mt-3.5">Project Monitoring Dashboard</p>
+                </div>
+            </header>
+            <!-- Project Details --><!-- live and priority projects status -->
+            <section class="flex flex-col md:flex-row md:items-start mb-2 gap-4">
+
+                <!-- Project Details -->
+                <div id="listDiv" class="w-[450px] rounded-2xl bg-white p-1 px-4 h-[820px] overflow-y-scroll bg-gray-100 p-4">
+                    <div class="p-1 flex mb-1">
+                        <div class="relative">
+                            <span class="absolute left-1 top-1/2 -translate-y-1/2 shadow">🔍</span>
+
+                            <input type="text"
+                                   placeholder="Job no..."
+                                   class="w-full pl-7 p-1 border border-gray-300 rounded">
+                        </div>
+                        <div class="relative">
+                            <span class="absolute left-1 top-1/2 -translate-y-1/2 shadow">🔍</span>
+
+                            <input type="text"
+                                   placeholder="Customer..."
+                                   class="w-full pl-7 p-1 border border-gray-300 rounded">
+                        </div>
+                        <div class="relative">
+                            <span class="absolute left-1 top-1/2 -translate-y-1/2 shadow">🔍</span>
+
+                            <input type="text"
+                                   placeholder="Engg name..."
+                                   class="w-full pl-7 p-1 border border-gray-300 rounded">
+                        </div>
+                    </div>
+                    <div class="flex gap-4">
+                        <div class="text-2xl font-bold tracking-tight mb-2 pd-1">
+                            Project Details
+                        </div>
+                        <button id="submit" class="rounded-2xl bg-blue-200 shadow text-center text-black text-md w-[80px] h-[30px] flex-1">
+                            Submit
+                        </button>
+                    </div>
+                    <div class="flex gap-4">
+                        <div class="text-black text-wrap mb-2">240665-FRONT ENCLOSURE WITH GPS CUP AND RADOME ASSEMBLY FIXTURE  for B6x PN 010-00177</div>
+                        <div class="flex-1 uppercase">AKASh</div>
+                        <div class="flex-1 uppercase">sanmina</div>
+                    </div>
+                </div>
+
+                <section>
+                    <!-- priority projects status -->
+                    <section>
+                        <div class=" p-1">
+                            <div class="mb-2 flex gap-4 items-end">
+                                <div class="text-3xl font-bold tracking-tight px-1">Priority Project Status</div>
+                                <button id="prioritylist" class="rounded-2xl bg-white p-2.5 px-5 shadow gap-[100]">Change</button>
+                            </div>
+                        </div>
+                        <div class="mt-2 px-1 overflow-y-auto max-h-[310px] thin-scrollbar bg-gray-100">
+                            <div class="rounded-2xl bg-white p-4 shadow mb-2 flex gap-4">
+                                <div>
+                                    <div class="flex items-end gap-2">
+                                        <div class="text-sm text-slate-500">Piority - 1</div>
+                                    </div>
+                                    <div class="flex items-end gap-2">
+                                        <div id="kpiBudget" class="text-3xl font-semibold">250002J01</div>
+                                    </div>
+                                </div>
+                                <div id="designstatus" class="rounded-2xl bg-green-500 p-4 shadow mb-2">Design</div>
+                                <div id="draftstatus" class="rounded-2xl bg-green-500 p-4 shadow mb-2">Draft</div>
+                                <div id="machinestatus" class="rounded-2xl bg-green-500 p-4 shadow mb-2">Machine</div>
+                                <div id="turningstatus" class="rounded-2xl bg-green-500 p-4 shadow mb-2">Turning</div>
+                                <div id="anodysingstatus" class="rounded-2xl bg-green-500 p-4 shadow mb-2">Anodysing</div>
+                                <div id="assemblystatus" class="rounded-2xl bg-green-500 p-4 shadow mb-2">Assembly</div>
+                                <div id="deliverystatus" class="rounded-2xl bg-red-500 p-4 shadow mb-2">Delivery</div>
+                            </div>
+                        </div>  <!-- piority items -->
+                    </section>  <!-- priority project status -->
+                    <!-- Line projects status -->
+                    <section>
+                        <div class=" p-1">
+                            <div class="mb-2 mt-2 flex gap-4 items-end">
+                                <div class="text-3xl font-bold tracking-tight px-1">Line Project Status</div>
+                                <button id="linelist" class="rounded-2xl bg-white p-2.5 px-5 shadow gap-[100]">Change</button>
+                            </div>
+                        </div>
+                        <div class="mt-2 overflow-y-auto max-h-[310px] thin-scrollbar bg-gray-100">
+                            <div class="rounded-2xl bg-white p-4 shadow mb-2 flex gap-4">
+                                <div>
+                                    <div class="flex items-end gap-2">
+                                        <div class="text-sm text-slate-500">Line item - 1</div>
+                                    </div>
+                                    <div class="flex items-end gap-2">
+                                        <div id="jobno" class="text-3xl font-semibold">250003J01</div>
+                                    </div>
+                                </div>
+                                <div id="designstatus" class="rounded-2xl bg-green-500 p-4 shadow mb-2">Design</div>
+                                <div id="draftstatus" class="rounded-2xl bg-green-500 p-4 shadow mb-2">Draft</div>
+                                <div id="machinestatus" class="rounded-2xl bg-green-500 p-4 shadow mb-2">Machine</div>
+                                <div id="turningstatus" class="rounded-2xl bg-green-500 p-4 shadow mb-2">Turning</div>
+                                <div id="anodysingstatus" class="rounded-2xl bg-green-500 p-4 shadow mb-2">Anodysing</div>
+                                <div id="assemblystatus" class="rounded-2xl bg-green-500 p-4 shadow mb-2">Assembly</div>
+                                <div id="deliverystatus" class="rounded-2xl bg-red-500 p-4 shadow mb-2">Delivery</div>
+                            </div>
+                        </div>  <!-- line items -->
+                    </section>  <!-- line project status -->
+                </section>  <!-- line and priority status -->
+            </section>  <!-- Main Window -->
+            <!-- footer -->
+            <footer class="text-center text-xs text-slate-400 mt-6">AGTEK dashboard • Edit in any editor • No build tools required</footer>
+        </div>
+    </div>
+    <div id="project" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+
+        <!-- Popup Box -->
+        <div class="bg-white p-6 rounded-lg shadow-lg w-80 relative">
+            <h2 class="text-xl font-semibold mb-2">Create Project</h2>
+            <div class="p-1 bg-white">
+                <label class="text-sm text-slate-500 flex flex-col">
+                    Customer Name
+                </label>
+                <div class="flex gap-2 mb-4">
+                    <select id="customername" class="w-[250px] shadow p-1 rounded focus:outline-none focus:ring-2 focus:ring-blue-400">
+                        <option>SANMINA</option>
+                        <option>SALCOMP</option>
+                        <option>FUJI</option>
+                        <option>FOXCONN</option>
+                        <option>SFO</option>
+                    </select>
+                    <button onclick="customeradd()" class="bg-green-200 text-black rounded w-[50px]">
+                        Add
+                    </button>
+                </div>
+                <input id="projectname"
+                       type="text"
+                       placeholder="project name..."
+                       class="w-[265px] p-1 shadow rounded focus:outline-none focus:ring-2 focus:ring-blue-400 mb-4">
+                <input id="contactperson"
+                       type="text"
+                       placeholder="Contact Person..."
+                       class="w-[265px] p-1 shadow rounded focus:outline-none focus:ring-2 focus:ring-blue-400 mb-4">
+                <input id="parchaseqty"
+                       type="number"
+                       placeholder="Quantity..."
+                       class="w-[265px] p-1 shadow rounded focus:outline-none focus:ring-2 focus:ring-blue-400 mb-4">
+                <label class="text-sm text-slate-500 flex flex-col">
+                    Expected Delivery Date
+                    <input id="toDate" type="date" class="rounded border-slate-300 px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-400 mb-4" />
+                </label>
+                <input id="newjobno"
+                       type="text"
+                       placeholder="Job No..."
+                       class="w-[265px] p-1 shadow rounded focus:outline-none focus:ring-2 focus:ring-blue-400 mb-4">
+            </div>
+            <button onclick="closeup()" class="bg-red-500 text-white px-4 py-2 rounded mb-4">
+                Close
+            </button>
+
+            <button onclick="createp()" class="bg-green-500 text-white px-7 py-2 rounded mb-4">
+                Create
+            </button>
+
+        </div>
+    </div>
+    <script>
+        // -------------------------
+        // Sample Data (You can Import/Export JSON to replace)
+        // -------------------------
+        let tasks = []; // Loaded from MySQL API
+
+        // -------------------------
+        // Utilities
+        // -------------------------
+        const $ = (sel) => document.querySelector(sel);
+        const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+        function toINR(n) {
+            if (isNaN(n)) return '-';
+            return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
+        }
+        function withinRange(dateStr, from, to) {
+            const d = new Date(dateStr);
+            if (from && d < new Date(from)) return false;
+            if (to && d > new Date(to)) return false;
+            return true;
+        }
+
+        // -------------------------
+        // Filters
+        // -------------------------
+        function getFilters() {
+            return {
+                from: $('#fromDate').value || null,
+                to: $('#toDate').value || null,
+                status: $('#statusFilter').value,
+                search: $('#searchBox').value.trim().toLowerCase()
+            };
+        }
+
+        function applyFilters(data) {
+            const f = getFilters();
+            return data.filter(t => {
+                const matchesDate = withinRange(t.start_date, f.from, f.to) || withinRange(t.end_date, f.from, f.to);
+                const matchesStatus = (f.status === 'all') || (t.status === f.status);
+                const hay = (t.task + ' ' + t.owner).toLowerCase();
+                const matchesSearch = !f.search || hay.includes(f.search);
+                return matchesDate && matchesStatus && matchesSearch;
+            });
+        }
+
+        // -------------------------
+        // Table Render
+        // -------------------------
+        function renderTable(rows) {
+            const tbody = $('#tableBody');
+            tbody.innerHTML = '';
+            rows.forEach(r => {
+                const tr = document.createElement('tr');
+                tr.className = 'odd:bg-white even:bg-slate-50';
+                tr.innerHTML = `
+                                          <td class="px-4 py-2">${r.task}</td>
+                                          <td class="px-4 py-2">${r.owner}</td>
+                                          <td class="px-4 py-2">${r.start_date}</td>
+                                          <td class="px-4 py-2">${r.end_date}</td>
+                                          <td class="px-4 py-2">
+                                            <span class="px-2 py-1 rounded-full text-xs font-medium ${badgeClass(r.status)}">${r.status}</span>
+                                          </td>
+                                          <td class="px-4 py-2">${r.progress}%</td>
+                                          <td class="px-4 py-2">${toINR(r.budget)}</td>
+                                          <td class="px-4 py-2">${toINR(r.spent)}</td>
+                                          <td class="px-4 py-2 flex gap-3">
+                                          <button class="text-sky-700 hover:underline" data-id="${r.id}">Edit</button>
+                                          <button class="text-rose-700 hover:underline" onclick="deleteTask(${r.id})">Delete</button>
+                                          </td>
+
+                                        `;
+                tr.querySelector('button').addEventListener('click', () => editTask(r.id));
+                tbody.appendChild(tr);
+            });
+        }
+
+        function badgeClass(status) {
+            switch (status) {
+                case 'Done': return 'bg-emerald-100 text-emerald-700';
+                case 'In Progress': return 'bg-sky-100 text-sky-700';
+                case 'At Risk': return 'bg-amber-100 text-amber-700';
+                case 'Blocked': return 'bg-rose-100 text-rose-700';
+                default: return 'bg-slate-100 text-slate-700';
+            }
+        }
+
+        // -------------------------
+        // KPI Render
+        // -------------------------
+        function renderKPIs(rows) {
+            const total = rows.length;
+            const done = rows.filter(r => r.status === 'Done').length;
+            const risk = rows.filter(r => r.status === 'At Risk' || r.status === 'Blocked').length;
+            const budget = rows.reduce((s, r) => s + (r.spent || 0), 0);
+            const budgetTotal = rows.reduce((s, r) => s + (r.budget || 0), 0);
+            $('#kpiTotal').textContent = total;
+            $('#kpiDone').textContent = done;
+            $('#kpiRisk').textContent = risk;
+            $('#kpiBudget').textContent = toINR(budget);
+            $('#kpiBudgetTotal').textContent = toINR(budgetTotal);
+        }
+
+        // -------------------------
+        // Charts
+        // -------------------------
+        let progressChart, statusChart;
+
+        function buildProgressSeries(rows) {
+            // Build daily cumulative progress average
+            const dates = [];
+            const points = [];
+            const allDates = Array.from(new Set(rows.flatMap(r => [r.start_date, r.end_date]))).sort();
+            allDates.forEach(d => {
+                const active = rows.filter(r => new Date(r.start_date) <= new Date(d) && new Date(r.end_date) >= new Date(d));
+                const avg = active.length ? Math.round(active.reduce((s, r) => s + r.progress, 0) / active.length) : 0;
+                dates.push(d);
+                points.push(avg);
+            });
+            return { dates, points };
+        }
+
+        function renderCharts(rows) {
+            const ctx1 = document.getElementById('progressChart');
+            const ctx2 = document.getElementById('statusChart');
+
+            const { dates, points } = buildProgressSeries(rows);
+            $('#progressRange').textContent = dates.length ? `${dates[0]} → ${dates[dates.length - 1]}` : '';
+
+            if (progressChart) progressChart.destroy();
+            progressChart = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: 'Avg Progress %',
+                        data: points,
+                        tension: 0.3,
+                        fill: false,
+                        borderWidth: 2,
+                        pointRadius: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            const statusCounts = ['Not Started', 'In Progress', 'At Risk', 'Blocked', 'Done']
+                .map(s => rows.filter(r => r.status === s).length);
+
+            if (statusChart) statusChart.destroy();
+            statusChart = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Not Started', 'In Progress', 'At Risk', 'Blocked', 'Done'],
+                    datasets: [{ data: statusCounts }]
+                },
+                options: {
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+        }
+
+
+
+        // -------------------------
+        // Import / Export
+        // -------------------------
+        function exportJSON() {
+            const blob = new Blob([JSON.stringify(tasks, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'project_tasks.json'; a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importJSON(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (Array.isArray(data)) {
+                        tasks = data;
+                        refresh();
+                    } else {
+                        alert('JSON must be an array of task objects.');
+                    }
+                } catch (err) {
+                    alert('Invalid JSON: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // -------------------------
+        // Refresh pipeline
+        // -------------------------
+        function refresh() {
+            const filtered = applyFilters(tasks);
+            renderTable(filtered);
+            renderKPIs(filtered);
+            renderCharts(filtered);
+        }
+
+        // -------------------------
+        // Events
+        // -------------------------
+        $('#resetBtn').addEventListener('click', () => {
+            $('#fromDate').value = '';
+            $('#toDate').value = '';
+            $('#statusFilter').value = 'all';
+            $('#searchBox').value = '';
+            refresh();
+        });
+
+        ['fromDate', 'toDate', 'statusFilter', 'searchBox'].forEach(id => {
+            document.getElementById(id).addEventListener('input', refresh);
+            document.getElementById(id).addEventListener('change', refresh);
+        });
+
+        $('#addRowBtn').addEventListener('click', addTask);
+        $('#exportBtn').addEventListener('click', exportJSON);
+
+        $('#importBtn').addEventListener('click', () => $('#fileInput').click());
+        $('#fileInput').addEventListener('change', (e) => {
+            const file = e.target.files?.[0];
+            if (file) importJSON(file);
+            e.target.value = '';
+        });
+
+        // ✅ Load from MySQL API on start
+        window.onload = loadFromDB;
+    </script>
+</body>
+</html>
