@@ -1,4 +1,4 @@
-﻿const express = require("express");
+const express = require("express");
 const cors = require("cors");
 const mysql = require("mysql2");
 
@@ -20,8 +20,8 @@ db.connect(err => {
 });
 
 // ✅ GET ALL TASKS
-app.get("/tasks", (req, res) => {
-    db.query("SELECT * FROM tasks", (err, rows) => {
+app.get("/projects", (req, res) => {
+    db.query("SELECT * FROM projects", (err, rows) => {
         if (err) throw err;
 
         // ✅ Convert date format to YYYY-MM-DD
@@ -35,15 +35,14 @@ app.get("/tasks", (req, res) => {
     });
 });
 
-// ✅ ADD NEW TASK
-app.post("/tasks", (req, res) => {
+// ✅ CREATE NEW PROJECT
+app.post("/projects", (req, res) => {
     const t = req.body;
-    const sql = `INSERT INTO tasks (task, owner, start_date, end_date, status, progress, budget, spent)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+    const sql = `INSERT INTO projects (jobno, enquery_date, project_name, customer, contact_person, quantity, expected_date, designer_name, design_start_date, design_end_date)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
     db.query(sql, [
-        t.task, t.owner, t.start_date, t.end_date,
-        t.status, t.progress, t.budget, t.spent
+        t.jobno, t.enquery_date, t.project_name, t.customer,t.contact_person, t.quantity, t.expected_date, t.designer_name, t.design_start_date, t.design_end_date
     ], (err, result) => {
         if (err) throw err;
         t.id = result.insertId;
@@ -52,16 +51,14 @@ app.post("/tasks", (req, res) => {
 });
 
 // ✅ UPDATE TASK
-app.put("/tasks/:id", (req, res) => {
+app.put("/projects/:id", (req, res) => {
     const id = req.params.id;
     const t = req.body;
 
-    const sql = `UPDATE tasks SET task=?, owner=?, start_date=?, end_date=?, 
-                 status=?, progress=?, budget=?, spent=? WHERE id=?`;
+    const sql = `UPDATE projects SET jobno=?,  WHERE id=?`;
 
     db.query(sql, [
-        t.task, t.owner, t.start_date, t.end_date,
-        t.status, t.progress, t.budget, t.spent, id
+        t.jobno, id
     ], (err) => {
         if (err) throw err;
         res.send({ message: "updated" });
@@ -69,8 +66,8 @@ app.put("/tasks/:id", (req, res) => {
 });
 
 // ✅ DELETE TASK
-app.delete("/tasks/:id", (req, res) => {
-    db.query("DELETE FROM tasks WHERE id=?", [req.params.id], err => {
+app.delete("/projects/:id", (req, res) => {
+    db.query("DELETE FROM projects WHERE id=?", [req.params.id], err => {
         if (err) throw err;
         res.send({ message: "deleted" });
     });
